@@ -10,6 +10,13 @@
 using std::cin, std::cout, std::endl;
 using std::istream, std::ostream;
 
+bool contain(std::list<std::string> ls, std::string x)
+{
+    for(auto&& i : ls)
+        if(i.compare(x) == 0)
+            return true;
+    return false;
+}
 
 struct quad_exp
 {
@@ -41,7 +48,7 @@ struct node
     node* left, * right;
     std::string op;
     std::list<std::string> sym_list;
-    int val;
+    double val;
     bool is_constant;
     
     node() : 
@@ -52,11 +59,16 @@ struct node
     {
         return (op == rhs.op && left == rhs.left && right == rhs.right);
     }
+
+    bool is_leaf()
+    {
+        return (left == nullptr && right == nullptr);
+    }
 };
 
 
 std::map<int, node*> node_map;
-
+std::list<std::string> active_var;
 
 // node* ceate(std::string&& symbol)
 node* create(const std::string& symbol)
@@ -66,7 +78,7 @@ node* create(const std::string& symbol)
     if(std::isdigit(symbol[0]))
     {
         new_node->is_constant = true;
-        new_node->val = std::stoi(symbol.c_str());
+        new_node->val = std::stof(symbol.c_str());
     }
     else
     {
@@ -87,7 +99,7 @@ node* find(const std::string& symbol)
             if(j.compare(symbol) == 0)
                 return tmp;
         
-        if(tmp->is_constant && tmp->val == std::atoi(symbol.c_str()))
+        if(tmp->is_constant && tmp->val == std::atof(symbol.c_str()))
             return tmp;
     }
 
@@ -107,13 +119,28 @@ node* find(const std::string& op, node* n1, node* n2)
     return nullptr;
 }
 
+std::list<node*> find_all(const std::string& symbol)
+{
+    std::list<node*> result;
+    for(auto&& i : node_map)
+    {
+        auto&& tmp = i.second;
+
+        for(auto&& j : tmp->sym_list)
+            if(j.compare(symbol) == 0)
+                result.push_back(tmp);
+    }
+
+    return result;
+}
+
 
 //(op, a1, a2, a3)
 void read_tuple3(const quad_exp& tpl)
 {
     node* n1 = nullptr, * n2 = nullptr, * n3 = nullptr;
     bool n23_const = true;  //n2和n3是否全为常量
-    int val2, val3;
+    double val2, val3;
     n2 = ::find(tpl.a2), n3 = ::find(tpl.a3); 
 
     if(n2 != nullptr)
@@ -125,7 +152,7 @@ void read_tuple3(const quad_exp& tpl)
         if(!std::isdigit(tpl.a2[0]))
             n23_const = false;
         else
-            val2 = std::atoi(tpl.a2.c_str());
+            val2 = std::atof(tpl.a2.c_str());
 
     if(n3 != nullptr)
         if(!n3->is_constant)
@@ -136,7 +163,7 @@ void read_tuple3(const quad_exp& tpl)
         if(!std::isdigit(tpl.a3[0]))
             n23_const = false;
         else
-            val3 = std::atoi(tpl.a3.c_str());
+            val3 = std::atof(tpl.a3.c_str());
 
     //n2n3均为常量 则直接计算n1值 n1无子结点
     if(n23_const)
@@ -151,13 +178,18 @@ void read_tuple3(const quad_exp& tpl)
             n1->val = val2 * val3;
         else if(op == "DIV")
             n1->val = val2 / val3;
-        else if(op == "MOD")
-            n1->val = val2 % val3;
+
         
         n1->is_constant = true;
         auto tmp = find(std::to_string(n1->val));
         if(tmp != nullptr)
-            tmp->sym_list.push_back(tpl.a1);
+        {
+            if(!::contain(tmp->sym_list, tpl.a1))
+            {
+                tmp->sym_list.push_back(tpl.a1);
+            }
+            delete n1;
+        }
         else
             node_map.insert({node_map.size(), n1});
     }
@@ -167,12 +199,7 @@ void read_tuple3(const quad_exp& tpl)
         n1 = find(tpl.op, n2, n3);
         if(n1 != nullptr)
         {
-            if([&]()->bool { 
-                for(auto&& i : n1->sym_list)
-                    if(i.compare(tpl.a1) == 0)
-                        return false;
-                return true;
-            }())
+            if(!::contain(n1->sym_list, tpl.a1))
             {
                 n1->sym_list.push_back(tpl.a1);
             }
@@ -193,13 +220,19 @@ void read_tuple3(const quad_exp& tpl)
             node_map.insert({node_map.size(), n3});
         }
 
-        n1 = find(tpl.a1);
-        if(n1 != nullptr)
-        {
-            for(auto i = n1->sym_list.begin(); i != n1->sym_list.end(); ++i)
-                if(i->compare(tpl.a1) == 0)
-                    i = n1->sym_list.erase(i);
-        }
+
+        //已经存在标记为a1的结点且该结点不是叶子，则移除该结点上的a1标志
+
+        auto all_node_with_a1 = find_all(tpl.a1);
+        if(!all_node_with_a1.empty())
+            for(auto&& n : all_node_with_a1)
+            {
+                if(n->is_leaf())
+                    continue;
+                for(auto i = n->sym_list.begin(); i != n->sym_list.end(); ++i)
+                        if(i->compare(tpl.a1) == 0)
+                            i = n->sym_list.erase(i);
+            }
         n1 = ::create(tpl.a1);
         n1->op = tpl.op;
         n1->left = n2;
@@ -221,13 +254,16 @@ void read_tuple2(const quad_exp& tpl)
         node_map.insert({node_map.size(), n2});
     }
 
-    n1 = ::find(tpl.a1);
-    if(n1 != nullptr)
-    {
-        for(auto i = n1->sym_list.begin(); i != n1->sym_list.end(); ++i)
-            if(i->compare(tpl.a1) == 0)
-                i = n1->sym_list.erase(i);
-    }
+    auto all_node_with_a1 = find_all(tpl.a1);
+        if(!all_node_with_a1.empty())
+            for(auto&& n : all_node_with_a1)
+            {
+                if(n->is_leaf())
+                    continue;
+                for(auto i = n->sym_list.begin(); i != n->sym_list.end(); ++i)
+                        if(i->compare(tpl.a1) == 0)
+                            i = n->sym_list.erase(i);
+            }
 
     n2->sym_list.push_back(tpl.a1);
 }
@@ -301,6 +337,7 @@ void release()
             delete i.second;
             i.second = nullptr;
         }
+    node_map.clear();
 }
 
 int main(int argc, char** argv)

@@ -1,4 +1,4 @@
-SET	T0	3	-
+SET	T0	3.14	-
 MUL	T1	2	T0
 ADD	T2	R	r
 MUL	A	T1	T2
