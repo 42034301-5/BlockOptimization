@@ -165,7 +165,12 @@ void read_tuple3(const quad_exp& tpl)
     else
     {
         n1 = find(tpl.op, n2, n3);
-        if(n1 != nullptr)
+        if(n1 != nullptr && [&]()->bool { 
+            for(auto&& i : n1->sym_list)
+                if(i.compare(tpl.a1) == 0)
+                    return false;
+            return true;
+         }() )
         {
             n1->sym_list.push_back(tpl.a1);
             return;
