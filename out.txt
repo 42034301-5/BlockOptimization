@@ -1,0 +1,8 @@
+SUB	S2	R	r 
+
+ADD	S1	R	r 
+
+MUL	A	6	S1 
+
+MUL	B	A	S2 
+

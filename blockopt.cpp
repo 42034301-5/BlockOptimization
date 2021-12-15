@@ -4,13 +4,16 @@
 #include <string>
 #include <map>
 #include <list>
+#include <stack>
+#include <vector>
 #include <utility>
 #include <algorithm>
 
 using std::cin, std::cout, std::endl;
 using std::istream, std::ostream;
 
-bool contain(std::list<std::string> ls, std::string x)
+template<typename T, typename F>
+bool contain(const T& ls, const F& x)
 {
     for(auto&& i : ls)
         if(i.compare(x) == 0)
@@ -48,7 +51,7 @@ struct node
     node* left, * right;
     std::string op;
     std::list<std::string> sym_list;
-    double val;
+    int val;
     bool is_constant;
     
     node() : 
@@ -68,7 +71,25 @@ struct node
 
 
 std::map<int, node*> node_map;
-std::list<std::string> active_var;
+std::list<std::string> active_var = {"A", "B"};
+
+bool is_root(node* n)
+{
+    for(auto&& i : node_map)
+        if(i.second->left == n || i.second->right == n)
+            return false;
+    return true;
+}
+
+bool contain_active(node* n)
+{
+    if(n->sym_list.empty())
+        return false;
+    for(auto&& i : n->sym_list)
+        if(contain(active_var, i))
+            return true;
+    return false;
+}
 
 // node* ceate(std::string&& symbol)
 node* create(const std::string& symbol)
@@ -78,7 +99,7 @@ node* create(const std::string& symbol)
     if(std::isdigit(symbol[0]))
     {
         new_node->is_constant = true;
-        new_node->val = std::stof(symbol.c_str());
+        new_node->val = std::stoi(symbol.c_str());
     }
     else
     {
@@ -99,7 +120,7 @@ node* find(const std::string& symbol)
             if(j.compare(symbol) == 0)
                 return tmp;
         
-        if(tmp->is_constant && tmp->val == std::atof(symbol.c_str()))
+        if(tmp->is_constant && tmp->val == std::atoi(symbol.c_str()))
             return tmp;
     }
 
@@ -140,7 +161,7 @@ void read_tuple3(const quad_exp& tpl)
 {
     node* n1 = nullptr, * n2 = nullptr, * n3 = nullptr;
     bool n23_const = true;  //n2和n3是否全为常量
-    double val2, val3;
+    int val2, val3;
     n2 = ::find(tpl.a2), n3 = ::find(tpl.a3); 
 
     if(n2 != nullptr)
@@ -152,7 +173,7 @@ void read_tuple3(const quad_exp& tpl)
         if(!std::isdigit(tpl.a2[0]))
             n23_const = false;
         else
-            val2 = std::atof(tpl.a2.c_str());
+            val2 = std::atoi(tpl.a2.c_str());
 
     if(n3 != nullptr)
         if(!n3->is_constant)
@@ -163,7 +184,7 @@ void read_tuple3(const quad_exp& tpl)
         if(!std::isdigit(tpl.a3[0]))
             n23_const = false;
         else
-            val3 = std::atof(tpl.a3.c_str());
+            val3 = std::atoi(tpl.a3.c_str());
 
     //n2n3均为常量 则直接计算n1值 n1无子结点
     if(n23_const)
@@ -229,9 +250,11 @@ void read_tuple3(const quad_exp& tpl)
             {
                 if(n->is_leaf())
                     continue;
-                for(auto i = n->sym_list.begin(); i != n->sym_list.end(); ++i)
+                for(auto i = n->sym_list.begin(); i != n->sym_list.end();)
                         if(i->compare(tpl.a1) == 0)
                             i = n->sym_list.erase(i);
+                        else
+                            ++i;
             }
         n1 = ::create(tpl.a1);
         n1->op = tpl.op;
@@ -260,12 +283,28 @@ void read_tuple2(const quad_exp& tpl)
             {
                 if(n->is_leaf())
                     continue;
-                for(auto i = n->sym_list.begin(); i != n->sym_list.end(); ++i)
+                for(auto i = n->sym_list.begin(); i != n->sym_list.end();)
                         if(i->compare(tpl.a1) == 0)
                             i = n->sym_list.erase(i);
+                        else
+                            ++i;
             }
 
     n2->sym_list.push_back(tpl.a1);
+}
+
+
+//(READ, X, -, -)
+void read_tuple1(const quad_exp& tpl)
+{
+    node* n1 = ::find(tpl.a1);
+    if(n1 != nullptr && !contain(n1->sym_list, tpl.a1))
+        n1->sym_list.push_back(tpl.a1);
+    else
+    {
+        n1 = ::create(tpl.a1);
+        node_map.insert({node_map.size(), n1});
+    }
 }
 
 
@@ -329,6 +368,68 @@ std::string print_DAG()
     return os.str();
 }
 
+quad_exp gen_code(node* n, node* L, node* R)
+{
+    quad_exp e;
+    e.a1 = node_symbol(n);
+    e.a2 = node_symbol(L);
+    e.a3 = node_symbol(R);
+    e.op = n->op;
+    
+    return e;
+}
+
+std::list<quad_exp> optimized_code()
+{
+    std::list<quad_exp> exps;
+    std::map<node*, bool> visited;
+    std::vector<node*> roots;
+    for(auto&& i : node_map)
+    {
+        if(i.second->is_leaf())
+            visited.insert({i.second, true});
+        else
+            visited.insert({i.second, false});
+    }
+
+    for(auto&& i : node_map)
+        if(::is_root(i.second))
+            roots.push_back(i.second);
+        
+    for(auto&& i : roots)
+    {
+        std::stack<node*> stk;
+        stk.push(i);
+        while(!stk.empty())
+        {
+            auto j = stk.top();
+            stk.pop();
+            if(j->is_leaf())
+            continue;
+            if(visited[j->left] && visited[j->right])
+            {
+                exps.push_back(gen_code(j, j->left, j->right));
+                visited[j] = true;
+                continue;
+            }
+            if(!visited[j->left])
+            {
+                stk.push(j);
+                stk.push(j->left);
+            }
+            if(!visited[j->right])
+            {
+                if(visited[j->left])
+                    stk.push(j);
+                stk.push(j->right);
+            }
+        }
+    }
+
+    
+    return exps;
+}
+
 void release()
 {
     for(auto&& i : node_map)
@@ -343,7 +444,8 @@ void release()
 int main(int argc, char** argv)
 {
     std::ifstream in("test_blockopt.txt");
-    std::ofstream out("DAG.txt");
+    std::ofstream out_DAG("DAG.txt");
+    std::ofstream out_tpl("out.txt");
 
     quad_exp e;
     while(in.peek() != EOF)
@@ -353,10 +455,63 @@ int main(int argc, char** argv)
             read_tuple3(e);
         else if(quad_type(e) == 2)
             read_tuple2(e);
+        else
+            read_tuple1(e);
     }
 
     std::string DAG = print_DAG();
-    out << DAG;
+    out_DAG << DAG;
+
+    //删除所有不含活跃变量的根结点
+    while(true)
+    {
+        bool futile_clear = true;
+        for(auto i = node_map.begin(); i != node_map.end();)
+        {
+            if(is_root(i->second) && !contain_active(i->second))
+            {
+                delete i->second;
+                i = node_map.erase(i);
+                futile_clear = false;
+            }
+            else
+                ++i;
+        }
+        if(futile_clear)
+            break;
+    }
+
+    //从n0开始删除所有不活跃的附加标识符，并对无标识符的结点附加一个标识符
+    size_t node_serial = 1;
+    for(auto&& i : node_map)
+    {
+        auto&& syml = i.second->sym_list;
+        if(!syml.empty())
+        {
+            for(auto j = syml.begin(); j != syml.end();)
+            {
+                if(!contain(active_var, *j) && (
+                    (!i.second->is_leaf()) ||                                                    // 非叶子结点的不活跃标识符全部删除
+                    (i.second->is_leaf() && i.second->is_constant) ||                            // 常数叶子结点的不活跃标识符全部删除
+                    (i.second->is_leaf() && !i.second->is_constant && j != syml.begin())         // 非常数叶子结点的非第一个不活跃标识符全部删除
+                ))
+                {
+                    j = syml.erase(j);
+                }
+                else
+                    ++j;
+            }
+        }
+
+        if(syml.empty() && !i.second->is_constant)
+            syml.push_back("S" + std::to_string(node_serial++));
+    }
+
+    cout << print_DAG() << endl;
+    for(auto&& e : optimized_code())
+    {
+        out_tpl << e << endl;
+    }
 
     release();
     return 0;

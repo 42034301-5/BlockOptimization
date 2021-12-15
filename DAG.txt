@@ -1,10 +1,8 @@
-Node: n0		Mark: 3.14		Is leaf: Y		Symbols: T0 			Const		
-Node: n1		Mark: 6.28		Is leaf: Y		Symbols: T1 			Const		
-Node: n2		Mark: 		Is leaf: Y		Symbols: R 		
-Node: n3		Mark: 		Is leaf: Y		Symbols: r 		
-Node: n4		Mark: ADD	Is leaf: N		Symbols: T2 T4 		Left node: n2		Right node: n3		
-Node: n5		Mark: MUL	Is leaf: N		Symbols: A 		Left node: n1		Right node: n4		
-Node: n6		Mark: 6.28		Is leaf: Y		Symbols: T3 			Const		
-Node: n7		Mark: MUL	Is leaf: N		Symbols: T5 		Left node: n6		Right node: n4		
-Node: n8		Mark: SUB	Is leaf: N		Symbols: T6 		Left node: n2		Right node: n3		
-Node: n9		Mark: MUL	Is leaf: N		Symbols: B 		Left node: n7		Right node: n8		
+Node: n0		Mark: 		Is leaf: Y		Symbols: R 		
+Node: n1		Mark: 		Is leaf: Y		Symbols: r 		
+Node: n2		Mark: 3		Is leaf: Y		Symbols: T0 			Const		
+Node: n3		Mark: 6		Is leaf: Y		Symbols: T1 T3 			Const		
+Node: n4		Mark: ADD	Is leaf: N		Symbols: T2 T4 		Left node: n0		Right node: n1		
+Node: n5		Mark: MUL	Is leaf: N		Symbols: A T5 		Left node: n3		Right node: n4		
+Node: n6		Mark: SUB	Is leaf: N		Symbols: T6 		Left node: n0		Right node: n1		
+Node: n7		Mark: MUL	Is leaf: N		Symbols: B 		Left node: n5		Right node: n6		
