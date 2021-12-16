@@ -1,16 +1,30 @@
 #include <iostream>
+#include <istream>
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <map>
 #include <list>
 #include <stack>
 #include <vector>
-#include <utility>
+#include <tuple>
 #include <algorithm>
 
 using std::cin, std::cout, std::endl;
 using std::istream, std::ostream;
+
+bool startswith(std::string a, std::string b)
+{
+    if(b.size() > a.size())
+        return false;
+    for(std::string::iterator i = a.begin(), j = b.begin(); j != b.end(); ++i, ++j)
+    {
+        if(*i != *j)
+            return false;
+    }
+    return true;
+}
 
 template<typename T, typename F>
 bool contain(const T& ls, const F& x)
@@ -71,7 +85,7 @@ struct node
 
 
 std::map<int, node*> node_map;
-std::list<std::string> active_var = {"A", "B"};
+std::list<std::string> active_var;
 
 bool is_root(node* n)
 {
@@ -277,6 +291,7 @@ void read_tuple2(const quad_exp& tpl)
         node_map.insert({node_map.size(), n2});
     }
 
+    //删去已存在的非叶子结点的标识符a1
     auto all_node_with_a1 = find_all(tpl.a1);
         if(!all_node_with_a1.empty())
             for(auto&& n : all_node_with_a1)
@@ -290,7 +305,23 @@ void read_tuple2(const quad_exp& tpl)
                             ++i;
             }
 
-    n2->sym_list.push_back(tpl.a1);
+    if(tpl.op.compare("SET") == 0)
+    {
+        n2->sym_list.push_back(tpl.a1);
+    }
+    else if(tpl.op.compare("ADR") == 0)
+    {
+        n1 = find(tpl.op, n2, nullptr);
+        if(n1 != nullptr && !contain(n1->sym_list, tpl.a1))
+            n1->sym_list.push_back(tpl.a1);
+        else
+        {
+            n1 = ::create(tpl.a1);
+            n1->left = n2;
+            n1->op = tpl.op;
+            node_map.insert({node_map.size(), n1});
+        }
+    }
 }
 
 
@@ -312,7 +343,7 @@ std::string node_symbol(node* n)
 {
     std::string res;
     if(n == nullptr)
-        return res;
+        return "-";
     
     if(n->is_constant)
         res = std::to_string(n->val);
@@ -379,6 +410,8 @@ quad_exp gen_code(node* n, node* L, node* R)
     return e;
 }
 
+
+//一个粪坑函数，暂时摆一个烂（
 std::list<quad_exp> optimized_code()
 {
     std::list<quad_exp> exps;
@@ -405,28 +438,45 @@ std::list<quad_exp> optimized_code()
             auto j = stk.top();
             stk.pop();
             if(j->is_leaf())
-            continue;
-            if(visited[j->left] && visited[j->right])
             {
-                exps.push_back(gen_code(j, j->left, j->right));
-                visited[j] = true;
-                continue;
+                //TODO
             }
-            if(!visited[j->left])
-            {
-                stk.push(j);
-                stk.push(j->left);
-            }
-            if(!visited[j->right])
+            else if(j->left && j->right == nullptr)
             {
                 if(visited[j->left])
+                {
+                    exps.push_back(gen_code(j, j->left, nullptr));
+                    visited[j] = true;
+                    continue;
+                }
+                else
+                {
                     stk.push(j);
-                stk.push(j->right);
+                    stk.push(j->left);
+                }
+            }
+            else
+            {
+                if(visited[j->left] && visited[j->right])
+                {
+                    exps.push_back(gen_code(j, j->left, j->right));
+                    visited[j] = true;
+                    continue;
+                }
+                if(!visited[j->left])
+                {
+                    stk.push(j);
+                    stk.push(j->left);
+                }
+                if(!visited[j->right])
+                {
+                    if(visited[j->left])
+                        stk.push(j);
+                    stk.push(j->right);
+                }
             }
         }
     }
-
-    
     return exps;
 }
 
@@ -441,78 +491,168 @@ void release()
     node_map.clear();
 }
 
+
+using Blocks = std::vector<std::list<quad_exp>>;
+using ActVars = std::vector<std::list<std::string>>;
+std::tuple<Blocks, ActVars> read_blocks(const std::string& filename)
+{
+    Blocks blocks;
+    ActVars act_vars;
+    std::ifstream infile(filename);
+
+    while(infile.peek() != EOF)
+    {
+        std::string line;
+        std::getline(infile, line);
+        std::list<quad_exp> block;
+        while(!line.empty() && !::startswith(line, ";") && !::startswith(line, "\n"))
+        {
+            std::istringstream is(line);
+            quad_exp e;
+            is >> e;
+            block.push_back(e);
+            std::getline(infile, line);
+        }
+
+        if(!block.empty())
+            blocks.push_back(block);
+
+        std::list<std::string> vars;
+        bool is_block = false;
+        if(::startswith(line, "; OUT"))
+        {
+            is_block = true;
+            std::istringstream is(std::string(line.begin() + 5, line.end()));
+            std::string act_var;
+            while(is >> act_var)
+            {
+                if(!act_var.empty())
+                    vars.push_back(act_var);
+                act_var.clear();
+            }
+        }
+        if(is_block)
+            act_vars.push_back(vars);
+        
+    }
+
+    return std::make_tuple(blocks, act_vars);
+}
+
+
 int main(int argc, char** argv)
 {
-    std::ifstream in("test_blockopt.txt");
+    auto[blocks, act_var_list] = read_blocks("out01.txt");
+    ::release();
+    active_var.clear();
+
     std::ofstream out_DAG("DAG.txt");
     std::ofstream out_tpl("out.txt");
 
-    quad_exp e;
-    while(in.peek() != EOF)
-    {
-        in >> e;
-        if(quad_type(e) == 3)
-            read_tuple3(e);
-        else if(quad_type(e) == 2)
-            read_tuple2(e);
-        else
-            read_tuple1(e);
-    }
+    Blocks optimized_blocks;
 
-    std::string DAG = print_DAG();
-    out_DAG << DAG;
-
-    //删除所有不含活跃变量的根结点
-    while(true)
+    for(size_t i = 0; i < blocks.size(); ++i)
     {
-        bool futile_clear = true;
-        for(auto i = node_map.begin(); i != node_map.end();)
+        std::list<quad_exp> optimized_block;
+        quad_exp end;
+        bool has_end = false;
+
+        active_var = act_var_list[i];
+        for(auto&& j : blocks[i])
         {
-            if(is_root(i->second) && !contain_active(i->second))
+            if(j.op.compare("LABEL") == 0 || j.op.compare("READ") == 0)
             {
-                delete i->second;
-                i = node_map.erase(i);
-                futile_clear = false;
+                optimized_block.push_back(j);
+                continue;
             }
-            else
-                ++i;
-        }
-        if(futile_clear)
-            break;
-    }
 
-    //从n0开始删除所有不活跃的附加标识符，并对无标识符的结点附加一个标识符
-    size_t node_serial = 1;
-    for(auto&& i : node_map)
-    {
-        auto&& syml = i.second->sym_list;
-        if(!syml.empty())
-        {
-            for(auto j = syml.begin(); j != syml.end();)
+            if(j.op.compare("HALT") == 0 || j.op[0] == 'J')
             {
-                if(!contain(active_var, *j) && (
-                    (!i.second->is_leaf()) ||                                                    // 非叶子结点的不活跃标识符全部删除
-                    (i.second->is_leaf() && i.second->is_constant) ||                            // 常数叶子结点的不活跃标识符全部删除
-                    (i.second->is_leaf() && !i.second->is_constant && j != syml.begin())         // 非常数叶子结点的非第一个不活跃标识符全部删除
-                ))
+                end = j;
+                has_end = true;
+                continue;
+            }
+            
+            if(quad_type(j) == 3)
+                read_tuple3(j);
+            else if(quad_type(j) == 2)
+                read_tuple2(j);
+            else if(quad_type(j) == 1)
+                read_tuple1(j);
+        }
+        out_DAG << "DAG for block" << i + 1 << endl; 
+        out_DAG << print_DAG() << endl << endl;
+
+        //删除所有不含活跃变量的根结点
+        while(true)
+        {
+            bool futile_clear = true;
+            for(auto i = node_map.begin(); i != node_map.end();)
+            {
+                if(is_root(i->second) && !contain_active(i->second))
                 {
-                    j = syml.erase(j);
+                    delete i->second;
+                    i = node_map.erase(i);
+                    futile_clear = false;
                 }
                 else
-                    ++j;
+                    ++i;
             }
+            if(futile_clear)
+                break;
         }
 
-        if(syml.empty() && !i.second->is_constant)
-            syml.push_back("S" + std::to_string(node_serial++));
+        //从n0开始删除所有不活跃的附加标识符，并对无标识符的结点附加一个标识符
+        size_t node_serial = 1;
+        for(auto&& i : node_map)
+        {
+            auto&& syml = i.second->sym_list;
+            if(!syml.empty())
+            {
+                for(auto j = syml.begin(); j != syml.end();)
+                {
+                    if(!contain(active_var, *j) && (
+                        (!i.second->is_leaf()) ||                                                    // 非叶子结点的不活跃标识符全部删除
+                        (i.second->is_leaf() && i.second->is_constant) ||                            // 常数叶子结点的不活跃标识符全部删除
+                        (i.second->is_leaf() && !i.second->is_constant && j != syml.begin())         // 非常数叶子结点的非第一个不活跃标识符全部删除
+                    ))
+                    {
+                        j = syml.erase(j);
+                    }
+                    else
+                        ++j;
+                }
+            }
+
+            if(syml.empty() && !i.second->is_constant)
+                syml.push_back("S" + std::to_string(node_serial++));
+        }
+
+        cout << print_DAG() << endl << endl;
+
+        for(auto&& i : optimized_code())
+        {
+            optimized_block.push_back(i);
+        }
+
+        if(has_end)
+            optimized_block.push_back(end);
+
+        optimized_blocks.push_back(optimized_block);
+
+        ::release();
+        active_var.clear();
     }
 
-    cout << print_DAG() << endl;
-    for(auto&& e : optimized_code())
+    for(size_t i = 0; i < optimized_blocks.size(); ++i)
     {
-        out_tpl << e << endl;
+        out_tpl << ";BLK" << i + 1 << endl;
+        for(auto&& j : optimized_blocks[i])
+        {
+            out_tpl << j;
+        }
+        out_tpl << endl << endl;
     }
-
-    release();
+    
     return 0;
 }

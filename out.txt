@@ -1,8 +1,22 @@
-SUB	S2	R	r 
-
+;BLK1
+READ	R	-	- 
+READ	r	-	- 
 ADD	S1	R	r 
-
 MUL	A	6	S1 
 
-MUL	B	A	S2 
+
+;BLK2
+LABEL	L	-	- 
+JGT	I	10	E 
+
+
+;BLK3
+ADD	I	I	1 
+JMP	L	-	- 
+
+
+;BLK4
+LABEL	E	-	- 
+HALT	-	-	- 
+
 
