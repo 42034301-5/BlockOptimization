@@ -31,11 +31,11 @@ struct QuadExp
 
     int type()  const
     {
-        if(op == "SET")
+        if (op == "SET")
             return 0;
-        if(op == "TAR")
+        if (op == "TAR")
             return 3;
-        if(a2 == "-" && a3 != "-")
+        if (a2 == "-" && a3 != "-")
             return 1;
         return 2;
     }
@@ -68,9 +68,9 @@ std::ostream& operator<<(std::ostream& out, const QuadExp& E)
 template<typename T, typename F>
 bool contain(const T& ls, const F& elem)
 {
-    for(auto&& e : ls)
+    for (auto&& e : ls)
     {
-        if(e == elem)
+        if (e == elem)
             return true;
     }
     return false;
@@ -78,9 +78,9 @@ bool contain(const T& ls, const F& elem)
 
 bool isLiteral(const std::string& arg)
 {
-    for(auto&& i : arg)
+    for (auto&& i : arg)
     {
-        if(i > '9' || i < '0')
+        if (i > '9' || i < '0')
             return false;
     }
     return true;
@@ -140,14 +140,14 @@ T difference(const T& A, const T& B)
 template<typename T>
 bool startWith(const T& A, const T& B)
 {
-    if(B.size() > A.size())
+    if (B.size() > A.size())
         return false;
 
     auto it1 = A.begin();
     auto it2 = B.begin();
-    while(it2 != B.end())
+    while (it2 != B.end())
     {
-        if(*it1 != *it2)
+        if (*it1 != *it2)
             return false;
         ++it1;
         ++it2;
@@ -158,11 +158,11 @@ bool startWith(const T& A, const T& B)
 std::string strip(const std::string& str, const char mark = ' ')
 {
     auto s = str;
-    while(!s.empty() && s.front() == mark)
+    while (!s.empty() && s.front() == mark)
     {
         s.erase(s.begin());
     }
-    while(!s.empty() && s.back() == mark)
+    while (!s.empty() && s.back() == mark)
     {
         s.erase(s.end() - 1);
     }
@@ -191,7 +191,7 @@ auto end(reversion_wrapper<T> w)
 template<typename T>
 reversion_wrapper<T> reverse(T&& iterable)
 {
-    return {iterable};
+    return { iterable };
 }
 
 

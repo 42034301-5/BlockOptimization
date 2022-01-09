@@ -82,12 +82,12 @@ QuadExp convertJOP(const std::cmatch& m)
 
 static std::vector<std::pair<std::regex, std::function<QuadExp(const std::cmatch&)>>> expRules = 
 {
-    {std::regex("(\\w*)\\s[=]\\s(\\w*)"), std::function(convertSET)},
-    {std::regex("(\\w*)\\s[=]\\s(\\w*)\\s([\\+\\-\\*\\/\\%])\\s(\\w*)"), std::function(convertART)},
-    {std::regex("(\\w*)\\s[=]\\s(\\w*)\\s\\[\\s(\\w*)\\s\\]"), std::function(convertFAR)},
-    {std::regex("(\\w*)\\s\\[\\s(\\w*)\\s\\]\\s[=]\\s(\\w*)"), std::function(convertTAR)},
-    {std::regex("!:\\s(\\w*)"), std::function(convertJMP)},
-    {std::regex("\\?\\s(\\w*)\\s(.*)\\s(\\w*)\\s:\\s(\\w*)"), std::function(convertJOP)}
+    {std::regex("(\\w*)\\s[=]\\s(\\w*)"), std::function<QuadExp(const std::cmatch&)>(convertSET)},
+    {std::regex("(\\w*)\\s[=]\\s(\\w*)\\s([\\+\\-\\*\\/\\%])\\s(\\w*)"), std::function<QuadExp(const std::cmatch&)>(convertART)},
+    {std::regex("(\\w*)\\s[=]\\s(\\w*)\\s\\[\\s(\\w*)\\s\\]"), std::function<QuadExp(const std::cmatch&)>(convertFAR)},
+    {std::regex("(\\w*)\\s\\[\\s(\\w*)\\s\\]\\s[=]\\s(\\w*)"), std::function<QuadExp(const std::cmatch&)>(convertTAR)},
+    {std::regex("!:\\s(\\w*)"), std::function<QuadExp(const std::cmatch&)>(convertJMP)},
+    {std::regex("\\?\\s(\\w*)\\s(.*)\\s(\\w*)\\s:\\s(\\w*)"), std::function<QuadExp(const std::cmatch&)>(convertJOP)}
 };
 
 QuadExp convert(const std::string& tri)
@@ -114,9 +114,10 @@ QuadExp convert(const std::string& tri)
 
 std::string convert2tri(const QuadExp& e)
 {
+    if (e.op == "HALT")
+        return std::string{ "HALT" };
+
     std::string result;
-    if(e.op == "HALT")
-        return "HALT";
     std::map<std::string, std::string> opt = 
     {
         {"ADD", "+"}, {"SUB", "-"},
