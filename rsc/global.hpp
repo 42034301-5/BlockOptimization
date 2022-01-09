@@ -16,7 +16,7 @@
 #include <assert.h>
 
 
-
+// 四元式的定义
 struct QuadExp
 {
     std::string op, a1, a2, a3;
@@ -29,14 +29,18 @@ struct QuadExp
         this->a3 = a3;
     }
 
+    // 返回四元式的类型
     int type()  const
     {
         if (op == "SET")
             return 0;
         if (op == "TAR")
             return 3;
+
+        // 1 型四元式暂未被使用
         if (a2 == "-" && a3 != "-")
             return 1;
+
         return 2;
     }
 
@@ -65,6 +69,7 @@ std::ostream& operator<<(std::ostream& out, const QuadExp& E)
     return out;
 };
 
+// 判断 elem 是否是 ls 中的元素
 template<typename T, typename F>
 bool contain(const T& ls, const F& elem)
 {
@@ -76,6 +81,7 @@ bool contain(const T& ls, const F& elem)
     return false;
 }
 
+// 判断 arg 代表的字符串是否是常数
 bool isLiteral(const std::string& arg)
 {
     for (auto&& i : arg)
@@ -86,6 +92,7 @@ bool isLiteral(const std::string& arg)
     return true;
 }
 
+// 求有序容器 A 与 B 的交集
 template<typename T>
 T intersection(const T& A, const T& B)
 {
@@ -103,6 +110,7 @@ T intersection(const T& A, const T& B)
     return result;
 }
 
+// 求有序容器 A 与 B 的并集
 template<typename T>
 T setunion(const T& A, const T& B)
 {
@@ -120,6 +128,7 @@ T setunion(const T& A, const T& B)
     return result;
 }
 
+// 求有序容器 A 与 B 的差集
 template<typename T>
 T difference(const T& A, const T& B)
 {
@@ -137,6 +146,7 @@ T difference(const T& A, const T& B)
     return result;
 }
 
+// 判断序列 A 是否以序列 B 开头
 template<typename T>
 bool startWith(const T& A, const T& B)
 {
@@ -155,6 +165,7 @@ bool startWith(const T& A, const T& B)
     return true;
 }
 
+// 删除字符串 str 两端的所有字符 mark
 std::string strip(const std::string& str, const char mark = ' ')
 {
     auto s = str;
@@ -170,24 +181,22 @@ std::string strip(const std::string& str, const char mark = ' ')
     return s;
 }
 
+// 反转序列进行基于范围的逆序遍历
 template<typename T>
 struct reversion_wrapper
 {
     T& iterable;
 };
-
 template<typename T>
 auto begin(reversion_wrapper<T> w)
 {
     return std::rbegin(w.iterable);
 }
-
 template<typename T>
 auto end(reversion_wrapper<T> w)
 {
     return std::rend(w.iterable);
 }
-
 template<typename T>
 reversion_wrapper<T> reverse(T&& iterable)
 {

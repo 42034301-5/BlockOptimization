@@ -7,27 +7,9 @@
 
 using json = nlohmann::json;
 
-//#define DEBUG
+
 int main(int argc, char** argv)
 {
-#ifdef DEBUG
-    QuadExp E;
-    DAG D;
-
-    std::ifstream in("in02.txt");
-    while (in.peek() != EOF)
-    {
-        std::string tmp;
-        std::getline(in, tmp);
-        E = convert(strip(strip(tmp, ' '), '"'));
-        D.readQuad(E);
-    }
-
-    std::cout << D.print_DAG();
-    std::vector<std::string> o = { "A", "I", "J", "X", "Y" };
-    auto s = D.genOptimizedCode(o);
-#endif
-
     std::string infilename = "quick_ext.json";
     std::string outfilename = "blkopt.json";
     std::string DAGfilename = "DAG.txt";

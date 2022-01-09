@@ -7,20 +7,7 @@
 #include "global.hpp"
 #include "convert.hpp"
 
-/*
-* ADD
-* SUB
-* MUL
-* DIV
-* MOD
-* TAR
-* FAR
-* SET
-* JGT
-* JLT
-* JEQ
-*/
-
+// DAG结点
 struct DAGNode
 {
     std::vector<std::string> symList;
@@ -28,7 +15,11 @@ struct DAGNode
     int right = -1;
     int tri = -1;
     std::string value;
+
+    // 对于形如 A [ I ] = X 的操作，其之后需要杀死依赖于 A 的所有结点
     bool isKilled = false;
+
+    // 数组操作的还原顺序
     size_t arrOptSerial = 0xffffffff;
 
     static std::shared_ptr<DAGNode> createNode()
@@ -66,10 +57,15 @@ class DAG
 {
 private:
     std::vector<std::shared_ptr<DAGNode>> nodes;
+
+    // 强制跳转和停机语句不生成DAG，仅暂存
     QuadExp jumperRec;
     QuadExp haltRec;
+
+    // 数组元素的还原顺序
     size_t arrOptSerial{};
 
+    // 返回结点 target 在 DAG 中的索引
     int findNode(std::shared_ptr<DAGNode> target) const
     {
         for (size_t i = 0; i < nodes.size(); ++i)
@@ -80,6 +76,7 @@ private:
         return -1;
     }
 
+    // 通过 Symbol 查找结点
     std::shared_ptr<DAGNode> findNodeBySymbol(const std::string& target) const
     {
         for (auto&& node : nodes)
@@ -95,6 +92,7 @@ private:
         return nullptr;
     }
 
+    // 通过 value 及子结点来查找结点
     std::shared_ptr<DAGNode> findNodeByValue(const std::string& target, int l, int r, int t) const
     {
         for (auto&& node : nodes)
@@ -107,6 +105,7 @@ private:
         return nullptr;
     }
 
+    // 判断带有附加标识符 symbol 的结点是否表示一个字面常量
     bool isLiteralNode(const std::string& symbol) const
     {
         auto n = findNodeBySymbol(symbol);
@@ -119,6 +118,7 @@ private:
         return false;
     }
 
+    // 取得一个字面常量结点所表示的常量值
     int getLiteral(const std::string& symbol) const
     {
         if (isLiteral(symbol))
@@ -134,6 +134,7 @@ private:
 
     }
 
+    // 删除 DAG 上所有等于 target 的附加标识符
     void removeSymbol(const std::string& target)
     {
         for (auto&& node : nodes)
@@ -143,6 +144,7 @@ private:
         }
     }
 
+    // 查找 DAG 上所有依赖于 n 的结点
     std::vector<size_t> findNodesDependingOn(std::shared_ptr<DAGNode> n)
     {
         std::vector<size_t> result;
@@ -157,7 +159,8 @@ private:
         return result;
     }
 
-    //(op, a1, a2, -)
+    // 读取四元式
+    // (op, a1, a2, -)
     std::vector<size_t> readQuad0(const QuadExp& E)
     {
         std::vector<size_t> result;
@@ -205,8 +208,7 @@ private:
         }
         return result;
     }
-
-    //(op, a1, a2, a3)
+    // (op, a1, a2, a3)
     std::vector<size_t> readQuad2(const QuadExp& E)
     {
         std::vector<size_t> result;
@@ -331,8 +333,7 @@ private:
         }
         return result;
     }
-
-    //(TAR, a1, a2, a3)  a1[a2] = a3
+    // (TAR, a1, a2, a3)  a1[a2] = a3
     std::vector<size_t> readQuad3(const QuadExp& E)
     {
         std::vector<size_t> result;
@@ -402,6 +403,7 @@ private:
         return result;
     }
 
+    // 判断结点 n 是否是入度为 0 的结点
     bool isRoot(std::shared_ptr<DAGNode> n) const
     {
         if (n == nullptr)
@@ -422,6 +424,7 @@ private:
         return true;
     }
 
+    // 判断结点 n 是否是有活跃变量的结点
     bool isActiveNode(std::shared_ptr<DAGNode> n, const std::vector<std::string>& outActive) const
     {
         if (n == nullptr)
@@ -445,6 +448,7 @@ private:
         return false;
     }
 
+    // 返回一个结点 n 生成的所有代码
     std::vector<QuadExp> genCode(std::shared_ptr<DAGNode> n, const std::vector<std::string>& outActive) const
     {
         std::vector<QuadExp> result;
@@ -532,6 +536,7 @@ private:
         return result;
     }
 
+    // 判断结点 n 是否代表一个无用赋值语句（形如 T = N ，其中 T 为非活跃变量）
     bool isFutileSET(std::shared_ptr<DAGNode> n, const std::vector<std::string>& active) const
     {
         // 没有活跃变量的SET语句结点是无用的
@@ -549,6 +554,7 @@ private:
 
 public:
 
+    // 读取一个四元式
     std::vector<size_t> readQuad(const QuadExp& E)
     {
         if (E.op == "JMP")
@@ -576,6 +582,7 @@ public:
         }
     }
 
+    // 打印 DAG
     std::string print_DAG() const
     {
         std::ostringstream os;
@@ -600,6 +607,7 @@ public:
         return os.str();
     }
 
+    // 返回优化后的代码
     std::vector<QuadExp> genOptimizedCode(std::vector<std::string> outActive)
     {
         std::vector<QuadExp> result;

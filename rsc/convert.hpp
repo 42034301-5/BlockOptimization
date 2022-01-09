@@ -2,6 +2,9 @@
 #define __CONVERT_HPP__
 #include "global.hpp"
 
+// 完成三地址代码和四元式的解析和相互转换
+// 如 (ADD, X, A, B)  <---> "X = A + B" 
+
 QuadExp convertSET(const std::cmatch& m)
 {
     QuadExp result;
@@ -80,6 +83,7 @@ QuadExp convertJOP(const std::cmatch& m)
     return result;
 }
 
+// 正则解析规则与匹配后对应的操作
 static std::vector<std::pair<std::regex, std::function<QuadExp(const std::cmatch&)>>> expRules = 
 {
     {std::regex("(\\w*)\\s[=]\\s(\\w*)"), std::function<QuadExp(const std::cmatch&)>(convertSET)},
