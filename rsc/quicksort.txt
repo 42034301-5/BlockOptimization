@@ -1,0 +1,57 @@
+T_17 = 0
+SL [ T_17 ] = 0
+T_18 = N - 1
+N = T_18
+T_19 = 0
+SR [ T_19 ] = N
+TOP = 0
+? TOP < 0 : 56
+M = SL [ TOP ]
+N = SR [ TOP ]
+T_20 = TOP - 1
+TOP = T_20
+? N <= M : 7
+T_21 = M - 1
+I = T_21
+J = N
+T_1 = N
+V = A [ T_1 ]
+T_22 = I + 1
+I = T_22
+T_2 = I
+T_3 = A [ T_2 ]
+? V > T_3 : 18
+T_23 = J - 1
+J = T_23
+T_4 = J
+T_5 = A [ T_4 ]
+? T_5 > V : 23
+? I >= J : 38
+T_6 = I
+X = A [ T_6 ]
+T_7 = I
+T_8 = J
+T_9 = A [ T_8 ]
+A [ T_7 ] = T_9
+T_10 = J
+A [ T_10 ] = X
+!: 18
+T_11 = I
+X = A [ T_11 ]
+T_12 = I
+T_13 = N
+T_14 = A [ T_13 ]
+A [ T_12 ] = T_14
+T_15 = N
+A [ T_15 ] = X
+T_24 = TOP + 1
+TOP = T_24
+SL [ TOP ] = M
+SR [ TOP ] = J
+T_25 = TOP + 1
+TOP = T_25
+T_16 = I + 1
+SL [ TOP ] = T_16
+SR [ TOP ] = N
+!: 7
+HALT
